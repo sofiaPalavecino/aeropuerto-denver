@@ -170,7 +170,7 @@ details.q div { padding: 0 18px 18px; }
 
 <header class="board">
   <div class="wrap">
-    <div class="board-id">DIA · Denver<small>Sistema automatizado de equipaje</small></div>
+    <div class="board-id">Aeropuerto de Denver<small>Sistema automatizado de equipaje</small></div>
     <div class="board-cells">
       <div class="cell"><span class="cell-label">Apertura</span><span class="flap" id="b-date"></span></div>
       <div class="cell"><span class="cell-label">Estado</span><span class="flap" id="b-status"></span></div>
@@ -199,10 +199,10 @@ const STAGES = [
   {
     id: 'estrategia', t: '1991', kind: 'decision', board: 'OCT 1993', status: 'EN OBRA',
     kicker: 'Verano de 1991', title: '¿Quién se encarga del equipaje?',
-    context: 'El plan era que cada aerolínea resolviera su propio sistema de equipaje. Pero la ciudad quiere algo más ambicioso: un sistema automatizado único, el más avanzado del mundo, que acorte las conexiones entre vuelos.',
+    context: 'El plan inicial era que cada aerolínea resolviera su propio sistema de equipaje. Pero la ciudad quiere algo más ambicioso: un sistema automatizado único, el más avanzado del mundo, que acorte las conexiones entre vuelos.',
     prompt: 'La clase vota:',
     options: [
-      { txt: 'Que cada aerolínea arme el suyo, como estaba previsto.', type: 'alt', msg: 'Era el plan original: un sistema más modesto, pero conocido. Renuncia a la promesa del aeropuerto.' },
+      { txt: 'Que cada aerolínea arme el suyo, como estaba previsto.', type: 'alt', msg: 'El plan el diseño estructural del aeropuerto se hizo considerando que cada aerolínea iba a implementar su propio sistema de equipaje.' },
       { txt: 'Un sistema integrado para todo el aeropuerto, a cargo de la ciudad.', type: 'real' },
       { txt: 'Sistema integrado, pero mover la inauguración para darle tiempo.', type: 'lock', msg: 'Bloqueado: la inauguración es en octubre de 1993.' }
     ],
@@ -295,14 +295,14 @@ const STAGES = [
   {
     id: 'hoy', t: '2026', kind: 'decision', board: '2026', status: 'SIMULADO',
     kicker: 'Segunda vuelta · 2026', title: 'Denver, hoy',
-    context: 'Mismo aeropuerto, mismo plan, mismas presiones. Pero hoy existen herramientas que conectan el software de control a un modelo virtual del sistema antes de construirlo. La simulación avisa: con la carga prevista, el sistema no llega a la capacidad prometida.',
+    context: 'Mismo aeropuerto, mismo plan, mismas presiones políticas. Pero hoy existen herramientas que conectan el software de control a un modelo virtual del sistema antes de construirlo. La simulación avisa que con la carga prevista, el sistema no llega a la capacidad prometida.',
     prompt: 'La clase vota:',
     options: [
       { txt: 'Mover la inauguración y rediseñar.', type: 'lock', msg: 'Bloqueado: la fecha es política. La simulación es una advertencia más, como las de los oferentes en 1991.' },
       { txt: 'Avanzar igual y ajustar sobre la marcha.', type: 'real' }
     ],
     real: 'La tecnología cambió: en 2025 la tasa de valijas mal manejadas bajó a 4,9 cada mil pasajeros, la más baja registrada. Lo que no cambió es la forma de decidir.',
-    concept: 'Hoy el proyecto difícilmente fallaría por la técnica: una simulación habría mostrado el problema a tiempo. Pero esa información solo sirve si alguien está dispuesto a escucharla.',
+    concept: 'Hoy el proyecto difícilmente fallaría únicamente por la técnica. Se podría utilizar una simulación que permita identificar el problema a tiempo. Pero esa información solo sirve si alguien está dispuesto a escucharla.',
     src: 'SITA (2026); Passenger Terminal Today (Emulate3D).'
   },
   {
