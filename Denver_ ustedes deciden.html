@@ -1,0 +1,562 @@
+<!doctype html><html><head><meta charset=utf8><meta name=viewport content="width=device-width,initial-scale=1,viewport-fit=cover"><style>:root{color-scheme:light;box-sizing:border-box;padding-top:env(safe-area-inset-top,0px);padding-bottom:env(safe-area-inset-bottom,0px)}html{scroll-padding-top:env(safe-area-inset-top,0px)}body{margin:0;padding:0;font:14px -apple-system,BlinkMacSystemFont,sans-serif;background:#fff;color:#000}img{max-width:100%}[hidden]:not([hidden=until-found i]){display:none!important}</style></head><body>
+<title>Denver: ustedes deciden</title>
+<meta name="claude:viewport-fit-sides" content="cover">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Big+Shoulders+Display:wght@600;800&family=Atkinson+Hyperlegible:ital,wght@0,400;0,700;1,400&family=JetBrains+Mono:wght@500;700&display=swap">
+<style>
+/* Layout: a fixed airport flight-board band on top, one stage (decision card) at a time below, a clickable timeline strip at the foot. */
+:root {
+  --bg: #e9ece8;
+  --surface: #f9faf7;
+  --fg: #16191d;
+  --muted: #5b6168;
+  --line: #cfd4cd;
+  --board: #1a1d21;
+  --board-fg: #f3b229;
+  --board-dim: #6f6a5c;
+  --amber: #c98a06;
+  --amber-soft: #f6e6bd;
+  --lock: #b23a26;
+  --lock-soft: #f6dcd5;
+  --ok: #2c6e52;
+  --ok-soft: #d8ece2;
+  --f-display: "Big Shoulders Display", "Arial Narrow", "Roboto Condensed", sans-serif;
+  --f-body: "Atkinson Hyperlegible", "Segoe UI", system-ui, sans-serif;
+  --f-mono: "JetBrains Mono", ui-monospace, "SFMono-Regular", Menlo, monospace;
+}
+@media (prefers-color-scheme: dark) {
+  :root:not([data-theme="light"]) {
+    --bg: #121417; --surface: #1b1e22; --fg: #e8eae5; --muted: #9aa0a6; --line: #2e3237;
+    --board: #0b0c0e; --board-fg: #f3b229; --board-dim: #5d5849;
+    --amber: #f0b43a; --amber-soft: #3a3020; --lock: #ef7a62; --lock-soft: #3b211c;
+    --ok: #6cc59c; --ok-soft: #1d3329; color-scheme: dark;
+  }
+}
+:root[data-theme="dark"] {
+  --bg: #121417; --surface: #1b1e22; --fg: #e8eae5; --muted: #9aa0a6; --line: #2e3237;
+  --board: #0b0c0e; --board-fg: #f3b229; --board-dim: #5d5849;
+  --amber: #f0b43a; --amber-soft: #3a3020; --lock: #ef7a62; --lock-soft: #3b211c;
+  --ok: #6cc59c; --ok-soft: #1d3329; color-scheme: dark;
+}
+* { box-sizing: border-box; }
+html, body { height: 100%; }
+body {
+  background: var(--bg); color: var(--fg);
+  font-family: var(--f-body); font-size: 1.05rem; line-height: 1.5;
+  display: flex; flex-direction: column;
+}
+body::before { content: ""; position: fixed; inset: 0 0 auto; height: env(safe-area-inset-top, 0px); z-index: 10; background: var(--board); }
+.wrap { padding-left: max(16px, env(safe-area-inset-left, 0px)); padding-right: max(16px, env(safe-area-inset-right, 0px)); }
+
+/* Flight board */
+.board { background: var(--board); color: var(--board-fg); position: sticky; top: env(safe-area-inset-top, 0px); z-index: 5; }
+.board .wrap { padding-block: 12px; display: flex; flex-wrap: wrap; gap: 10px 28px; align-items: center; justify-content: space-between; max-width: 1180px; margin: 0 auto; }
+.board-id { font-family: var(--f-display); font-weight: 800; font-size: 1.35rem; letter-spacing: .04em; text-transform: uppercase; line-height: 1.1; }
+.board-id small { display: block; font-family: var(--f-mono); font-weight: 500; font-size: .68rem; letter-spacing: .14em; color: var(--board-dim); }
+.board-cells { display: flex; flex-wrap: wrap; gap: 10px 22px; align-items: flex-end; }
+.cell { display: flex; flex-direction: column; gap: 4px; }
+.cell-label { font-family: var(--f-mono); font-size: .66rem; letter-spacing: .16em; color: var(--board-dim); text-transform: uppercase; }
+.flap { display: flex; gap: 2px; font-family: var(--f-mono); font-weight: 700; font-size: 1.15rem; }
+.flap span { display: inline-block; min-width: .95em; text-align: center; padding: 3px 1px; background: #24282d; border-radius: 2px; color: var(--board-fg); position: relative; }
+.flap span::after { content: ""; position: absolute; left: 0; right: 0; top: 50%; height: 1px; background: #0b0c0e; }
+.flap span.sp { background: transparent; }
+.flap span.sp::after { display: none; }
+.flap span.flip { animation: flip .32s ease-out both; }
+@keyframes flip { 0% { transform: rotateX(90deg); opacity: .2; } 100% { transform: rotateX(0); opacity: 1; } }
+.lock-ico { width: 15px; height: 15px; vertical-align: -2px; }
+.status-lock { color: #ff8d72; }
+
+/* Stage */
+main { flex: 1; }
+main .wrap { max-width: 1180px; margin: 0 auto; padding-block: 28px 40px; }
+.stage { display: grid; grid-template-columns: minmax(0, 5fr) minmax(0, 6fr); gap: 32px; align-items: start; }
+.stage.single { grid-template-columns: minmax(0, 1fr); max-width: 860px; }
+@media (max-width: 860px) { .stage { grid-template-columns: minmax(0, 1fr); gap: 22px; } }
+.kicker { font-family: var(--f-mono); font-size: .78rem; letter-spacing: .16em; text-transform: uppercase; color: var(--amber); font-weight: 700; display: flex; gap: 10px; align-items: center; flex-wrap: wrap; }
+.tag { font-family: var(--f-mono); font-size: .7rem; letter-spacing: .12em; padding: 2px 8px; border: 1px solid var(--line); border-radius: 3px; color: var(--muted); }
+h1, h2 { font-family: var(--f-display); font-weight: 800; text-transform: uppercase; letter-spacing: .01em; line-height: .95; text-wrap: balance; margin: 10px 0 16px; }
+h1 { font-size: clamp(2.8rem, 7vw, 5.4rem); }
+h2 { font-size: clamp(2.2rem, 4.6vw, 3.6rem); }
+.context { font-size: 1.12rem; max-width: 62ch; color: var(--fg); margin: 0 0 14px; }
+.context.muted { color: var(--muted); }
+.prompt { font-weight: 700; margin-top: 18px; }
+
+/* Options as baggage tags */
+.options { display: grid; gap: 12px; }
+.opt {
+  font: inherit; color: inherit; text-align: left; cursor: pointer;
+  display: grid; grid-template-columns: 54px minmax(0, 1fr); align-items: stretch;
+  background: var(--surface); border: 1.5px solid var(--line); border-radius: 6px; padding: 0; overflow: hidden;
+  transition: border-color .15s, transform .15s;
+}
+.opt:hover { border-color: var(--amber); transform: translateY(-1px); }
+.opt:focus-visible { outline: 3px solid var(--amber); outline-offset: 2px; }
+.opt .code { font-family: var(--f-display); font-weight: 800; font-size: 1.9rem; display: grid; place-items: center; background: var(--amber-soft); color: var(--amber); border-right: 1.5px dashed var(--line); }
+.opt .txt { padding: 14px 16px; font-size: 1.06rem; }
+.opt .msg { display: block; margin-top: 8px; font-size: .95rem; }
+.opt.locked { border-color: var(--lock); background: var(--lock-soft); cursor: not-allowed; }
+.opt.locked .code { background: var(--lock); color: var(--surface); }
+.opt.locked .msg { color: var(--lock); font-weight: 700; }
+.opt.chosen { border-color: var(--ok); }
+.opt.chosen .code { background: var(--ok); color: var(--surface); }
+.opt.faded { opacity: .55; }
+.opt.shake { animation: shake .4s; }
+@keyframes shake { 20%,60% { transform: translateX(-6px); } 40%,80% { transform: translateX(6px); } }
+
+/* Reveal */
+.reveal { margin-top: 18px; display: grid; gap: 12px; }
+.panel { border-radius: 6px; padding: 16px 18px; border: 1.5px solid var(--line); background: var(--surface); }
+.panel h3 { margin: 0 0 6px; font-family: var(--f-mono); font-size: .74rem; letter-spacing: .16em; text-transform: uppercase; color: var(--muted); }
+.panel p { margin: 0; }
+.panel.real { border-left: 6px solid var(--fg); }
+.panel.concept { border-left: 6px solid var(--amber); }
+.panel.concept h3 { color: var(--amber); }
+.qref { display: inline-block; margin-top: 10px; font-family: var(--f-mono); font-size: .72rem; letter-spacing: .1em; color: var(--muted); }
+.src { font-size: .85rem; color: var(--muted); margin-top: 8px; }
+
+/* Stakeholder table */
+.chips { display: flex; flex-wrap: wrap; gap: 10px; margin: 6px 0 14px; }
+.chip { font: inherit; cursor: pointer; padding: 10px 14px; border-radius: 999px; border: 1.5px solid var(--line); background: var(--surface); color: var(--fg); display: flex; gap: 8px; align-items: center; }
+.chip[aria-pressed="true"] { border-color: var(--amber); background: var(--amber-soft); }
+.chip:focus-visible { outline: 3px solid var(--amber); outline-offset: 2px; }
+.roles { display: grid; gap: 8px; }
+.role { display: grid; grid-template-columns: minmax(0, 1fr) auto; gap: 4px 12px; padding: 12px 14px; border-radius: 6px; border: 1.5px solid var(--line); background: var(--surface); }
+.role b { font-size: 1.02rem; }
+.role .r { font-family: var(--f-mono); font-size: .72rem; letter-spacing: .1em; text-transform: uppercase; color: var(--muted); grid-column: 1 / -1; }
+.role .seat { font-family: var(--f-mono); font-size: .72rem; letter-spacing: .1em; font-weight: 700; align-self: start; }
+.role.in .seat { color: var(--ok); }
+.role.out { opacity: .8; }
+.role.out .seat { color: var(--lock); }
+.role.out b { text-decoration: line-through; text-decoration-thickness: 2px; text-decoration-color: var(--lock); }
+
+.btn { font: inherit; font-weight: 700; cursor: pointer; padding: 11px 18px; border-radius: 6px; border: 1.5px solid var(--fg); background: var(--fg); color: var(--bg); }
+.btn.ghost { background: transparent; color: var(--fg); }
+.btn:focus-visible { outline: 3px solid var(--amber); outline-offset: 2px; }
+.btn[disabled] { opacity: .35; cursor: default; }
+.row { display: flex; flex-wrap: wrap; gap: 10px; align-items: center; }
+
+.event-card { border: 2px dashed var(--amber); border-radius: 8px; padding: 22px; background: var(--surface); }
+.bullets { display: grid; gap: 10px; padding: 0; margin: 0; list-style: none; }
+.bullets li { padding: 12px 14px; border-radius: 6px; background: var(--surface); border: 1.5px solid var(--line); }
+.bullets b { display: block; }
+.big-quote { font-family: var(--f-display); font-weight: 600; font-size: clamp(1.5rem, 2.8vw, 2.1rem); line-height: 1.15; text-wrap: balance; margin: 0; }
+.tally { display: flex; flex-wrap: wrap; gap: 12px; }
+.tally div { flex: 1 1 180px; padding: 14px 16px; border-radius: 6px; background: var(--surface); border: 1.5px solid var(--line); }
+.tally strong { display: block; font-family: var(--f-display); font-size: 2.6rem; line-height: 1; font-variant-numeric: tabular-nums; }
+.tally span { color: var(--muted); font-size: .92rem; }
+details.q { border: 1.5px solid var(--line); border-radius: 6px; background: var(--surface); }
+details.q summary { cursor: pointer; padding: 16px 18px; font-family: var(--f-display); font-weight: 800; font-size: 1.5rem; text-transform: uppercase; line-height: 1.05; }
+details.q div { padding: 0 18px 18px; }
+
+/* Footer timeline + nav */
+.foot { border-top: 1.5px solid var(--line); background: var(--surface); }
+.foot .wrap { max-width: 1180px; margin: 0 auto; padding-block: 12px; display: flex; gap: 14px; align-items: center; flex-wrap: wrap; justify-content: space-between; }
+.timeline { display: flex; gap: 4px; overflow-x: auto; flex: 1 1 520px; min-width: 0; padding-bottom: 2px; }
+.tl { font: inherit; cursor: pointer; border: 0; background: transparent; color: var(--muted); display: flex; flex-direction: column; align-items: flex-start; gap: 4px; padding: 4px 6px; min-width: 58px; border-radius: 4px; }
+.tl i { display: block; height: 4px; width: 100%; background: var(--line); border-radius: 2px; }
+.tl small { font-family: var(--f-mono); font-size: .62rem; letter-spacing: .08em; white-space: nowrap; }
+.tl.done i { background: var(--amber); }
+.tl.now { color: var(--fg); }
+.tl.now i { background: var(--fg); }
+.tl:focus-visible { outline: 2px solid var(--amber); }
+.hint { font-family: var(--f-mono); font-size: .66rem; color: var(--muted); letter-spacing: .08em; }
+
+@media (prefers-reduced-motion: reduce) {
+  .flap span.flip, .opt.shake { animation: none; }
+  .opt { transition: none; }
+}
+</style>
+
+<header class="board">
+  <div class="wrap">
+    <div class="board-id">DIA · Denver<small>Sistema automatizado de equipaje</small></div>
+    <div class="board-cells">
+      <div class="cell"><span class="cell-label">Apertura</span><span class="flap" id="b-date"></span></div>
+      <div class="cell"><span class="cell-label">Estado</span><span class="flap" id="b-status"></span></div>
+      <div class="cell"><span class="cell-label">Bloqueos</span><span class="flap" id="b-locks"></span></div>
+    </div>
+  </div>
+</header>
+
+<main><div class="wrap" id="stage" aria-live="polite"></div></main>
+
+<footer class="foot">
+  <div class="wrap">
+    <nav class="timeline" id="timeline" aria-label="Línea de tiempo"></nav>
+    <div class="row">
+      <button class="btn ghost" id="prev" type="button">← Anterior</button>
+      <button class="btn" id="next" type="button">Siguiente →</button>
+    </div>
+  </div>
+</footer>
+
+<script>
+const LOCK_SVG = '<svg class="lock-ico" viewBox="0 0 16 16" aria-hidden="true"><rect x="2.5" y="7" width="11" height="8" rx="1.5" fill="currentColor"/><path d="M5 7V5a3 3 0 0 1 6 0v2" fill="none" stroke="currentColor" stroke-width="2"/></svg>';
+
+const STAGES = [
+  { id: 'inicio', t: 'INICIO', kind: 'intro', board: 'OCT 1993', status: 'EN OBRA' },
+  {
+    id: 'estrategia', t: '1991', kind: 'decision', board: 'OCT 1993', status: 'EN OBRA',
+    kicker: 'Verano de 1991', title: '¿Quién se encarga del equipaje?',
+    context: 'El plan era que cada aerolínea resolviera su propio sistema de equipaje. Pero la ciudad quiere algo más ambicioso: un sistema automatizado único, el más avanzado del mundo, que acorte las conexiones entre vuelos.',
+    prompt: 'La clase vota:',
+    options: [
+      { txt: 'Que cada aerolínea arme el suyo, como estaba previsto.', type: 'alt', msg: 'Era el plan original: un sistema más modesto, pero conocido. Renuncia a la promesa del aeropuerto.' },
+      { txt: 'Un sistema integrado para todo el aeropuerto, a cargo de la ciudad.', type: 'real' },
+      { txt: 'Sistema integrado, pero mover la inauguración para darle tiempo.', type: 'lock', msg: 'Bloqueado: la inauguración es en octubre de 1993.' }
+    ],
+    real: 'Se eligió el sistema integrado, pero en 1991, con el edificio ya en obra. Si se hubiera decidido al principio, había dos años más para desarrollarlo.',
+    concept: 'Cambiar de tecnología exige cambiar quién es responsable. La decisión llegó tarde, y ese atraso se convirtió en presión sobre el cronograma.',
+    src: 'Calleam Consulting, Key Decision 1.'
+  },
+  {
+    id: 'prototipo', t: '1992', kind: 'decision', board: 'OCT 1993', status: 'EN OBRA',
+    kicker: '1991 – 1992', title: 'Las licitaciones fracasan',
+    context: 'Se rechazan las tres ofertas oficiales. Los oferentes advierten que el plazo no alcanza. BAE, que ya construía un sistema para United, muestra un prototipo a gran escala montado en un galpón.',
+    prompt: 'La clase vota:',
+    options: [
+      { txt: 'Pedir una revisión independiente del prototipo y del plan.', type: 'lock', msg: 'Bloqueado: no hay tiempo. La revisión demora la obra.' },
+      { txt: 'Confiar en el prototipo y avanzar con BAE.', type: 'real' }
+    ],
+    real: 'El director del aeropuerto, Walter Slinger, quedó convencido con la demostración y negoció en persona. Nadie revisó la propuesta de forma independiente. Calleam lo llama el epicentro del desastre.',
+    concept: 'Advertencias ignoradas. El prototipo probaba que la idea funcionaba en un galpón, no a escala de aeropuerto: el sistema era unas cien veces más complejo que cualquier otro, diez veces más rápido y con diez veces más destinos.',
+    q: 'Pregunta disparadora 2',
+    src: 'Calleam, Key Decision 2; de Neufville (1994).'
+  },
+  {
+    id: 'contrato', t: 'ABR 92', kind: 'stake', board: 'OCT 1993', status: 'CONTRATO',
+    kicker: 'Abril de 1992', title: 'La mesa del contrato',
+    context: 'El contrato con BAE se cierra en tres sesiones de trabajo intensas: alcance, plazo y precio fijos, por US$193 millones.',
+    prompt: '¿A quién sientan en la mesa? Toquen a los que invitarían.',
+    people: [
+      { n: 'Ciudad de Denver', r: 'Cliente: contrata y paga', inSeat: true },
+      { n: 'BAE Automated Systems', r: 'Proveedor', inSeat: true },
+      { n: 'United Airlines', r: 'Stakeholder y usuario directo: va a operar el sistema', inSeat: false },
+      { n: 'Otras aerolíneas', r: 'Stakeholders y usuarios directos', inSeat: false },
+      { n: 'Pasajeros', r: 'Usuarios finales indirectos: no operan el sistema, pero sus hábitos definen qué tiene que resolver', inSeat: false }
+    ],
+    concept: 'Las aerolíneas, que iban a usar el sistema todos los días, quedaron afuera de las decisiones clave. Nadie relevó qué necesitaban.',
+    src: 'Calleam, Key Decision 3.'
+  },
+  {
+    id: 'slinger', t: 'OCT 92', kind: 'event', board: 'OCT 1993', status: 'EN OBRA',
+    kicker: 'Octubre de 1992 · Carta de evento', title: 'Muere Walter Slinger',
+    context: 'El impulsor del sistema muere. Su reemplazo no tiene su formación en ingeniería y además conserva sus responsabilidades anteriores. Desde ese momento, nadie en la conducción entiende del todo el sistema.',
+    concept: 'Riesgo de persona clave: el conocimiento del proyecto estaba concentrado en una sola persona.',
+    src: 'Calleam, Other failure points.'
+  },
+  {
+    id: 'cambios', t: 'ENE 93', kind: 'decision', board: 'OCT 1993', status: 'CAMBIOS',
+    kicker: 'Enero de 1993', title: 'Las aerolíneas piden cambios',
+    context: 'BAE había puesto como condición que no hubiera cambios. Ahora las aerolíneas piden un área más grande para retirar equipo de esquí, racks para esquíes, vías de mantenimiento para reparar carros sin sacarlos de los rieles y cambios en el equipaje sobredimensionado.',
+    prompt: 'Antes de votar: ¿quiénes pasan por el aeropuerto de Denver?',
+    options: [
+      { txt: 'Rechazar los cambios: el contrato es cerrado.', type: 'alt', msg: 'Las aerolíneas son las que usan el sistema. Rechazar lo que necesitan no hace desaparecer la necesidad.' },
+      { txt: 'Aceptar los cambios.', type: 'real' }
+    ],
+    real: 'La presión de los stakeholders fue más fuerte y se aceptaron. En total, los cambios sumaron unos US$20 millones sobre un contrato de US$193 millones.',
+    concept: 'Síntoma, no causa. Denver es la puerta de entrada a los centros de esquí de Colorado: con un relevamiento de quiénes usan el aeropuerto, el requisito del equipo de esquí se habría anticipado.',
+    q: 'Pregunta disparadora 1',
+    src: 'Calleam, Key Decision 4; Gibbs (1994).'
+  },
+  {
+    id: 'demo', t: 'ABR 94', kind: 'decision', board: 'MAY 1994', status: 'DEMORADO', seq: ['OCT 1993', 'DIC 1993', 'MAR 1994', 'MAY 1994'],
+    kicker: 'Abril de 1994', title: 'La demostración ante la prensa',
+    context: 'La inauguración ya se postergó tres veces. En la demostración, frente a los periodistas, el sistema destruye valijas y desparrama ropa por los rieles.',
+    prompt: 'La clase vota:',
+    options: [
+      { txt: 'Frenar y replantear el proyecto.', type: 'lock', msg: 'Bloqueado: ya se invirtió demasiado como para frenar ahora.' },
+      { txt: 'Seguir adelante: está casi listo.', type: 'real' }
+    ],
+    real: 'Se siguió. El proyecto recién se corrigió por presión externa, cuando los bonos del aeropuerto fueron degradados y cada mes de demora sumaba millones en intereses y costos.',
+    concept: 'Escalada del compromiso: cuanto más se invirtió, más difícil fue frenar.',
+    src: 'Montealegre y Keil (2000); GAO/RCED-95-35BR.'
+  },
+  {
+    id: 'planb', t: 'AGO 94', kind: 'decision', board: 'MAY 1994', status: 'DEMORADO',
+    kicker: 'Agosto de 1994', title: 'El plan B',
+    context: 'La consultora Logplan recomienda no seguir esperando al sistema automático. United insiste en terminarlo. El alcalde Wellington Webb tiene que decidir.',
+    prompt: 'La clase vota:',
+    options: [
+      { txt: 'Esperar al sistema automático.', type: 'alt', msg: 'Es lo que pedía United. Pero cada mes con el aeropuerto cerrado costaba millones.' },
+      { txt: 'Construir un sistema manual de respaldo.', type: 'real' }
+    ],
+    real: 'Se construyó a las apuradas un sistema manual con carros y tractores, por US$51 millones más. El aeropuerto abrió el 28 de febrero de 1995, 16 meses tarde.',
+    concept: 'El respaldo funcionó porque era distinto. En 2023, el control aéreo británico (NATS) tenía un respaldo que corría el mismo software, y falló igual. Un plan B sirve si es distinto y si se piensa desde el diseño.',
+    q: 'Pregunta disparadora 3',
+    src: 'Calleam, Key Decision 6; informe final de NATS (2025).'
+  },
+  {
+    id: 'final', t: '2005', kind: 'final', board: '28 FEB 1995', status: 'ABANDONADO',
+    kicker: '1995 – 2005', title: 'El final',
+    context: 'El sistema automatizado solo llegó a usarse para el equipaje de salida de United. Mantenerlo costaba alrededor de US$1 millón por mes. En 2005 se abandonó.'
+  },
+  {
+    id: 'hoy', t: '2026', kind: 'decision', board: '2026', status: 'SIMULADO',
+    kicker: 'Segunda vuelta · 2026', title: 'Denver, hoy',
+    context: 'Mismo aeropuerto, mismo plan, mismas presiones. Pero hoy existen herramientas que conectan el software de control a un modelo virtual del sistema antes de construirlo. La simulación avisa: con la carga prevista, el sistema no llega a la capacidad prometida.',
+    prompt: 'La clase vota:',
+    options: [
+      { txt: 'Mover la inauguración y rediseñar.', type: 'lock', msg: 'Bloqueado: la fecha es política. La simulación es una advertencia más, como las de los oferentes en 1991.' },
+      { txt: 'Avanzar igual y ajustar sobre la marcha.', type: 'real' }
+    ],
+    real: 'La tecnología cambió: en 2025 la tasa de valijas mal manejadas bajó a 4,9 cada mil pasajeros, la más baja registrada. Lo que no cambió es la forma de decidir.',
+    concept: 'Hoy el proyecto difícilmente fallaría por la técnica: una simulación habría mostrado el problema a tiempo. Pero esa información solo sirve si alguien está dispuesto a escucharla.',
+    src: 'SITA (2026); Passenger Terminal Today (Emulate3D).'
+  },
+  {
+    id: 'theline', t: 'NEOM', kind: 'parallel', board: '2026', status: 'SUSPENDIDO',
+    kicker: 'Arabia Saudita · 2021 – 2025', title: 'The Line, NEOM',
+    context: 'Un proyecto que buscaba superar el estado del arte, con una planificación irreal y movida por la política. El paralelo actual de Denver.',
+    items: [
+      ['La idea antes que el diseño', 'Se anunció en 2021 con la forma ya cerrada: 170 km de largo, 500 m de alto, 9 millones de habitantes. Recién después se evaluó si era viable.'],
+      ['Supuestos optimistas', 'Una auditoría interna, informada por el Wall Street Journal en 2025, corrigió el plan: US$8,8 billones y terminarla hacia 2080.'],
+      ['Fecha política', 'El plazo estaba atado a la Visión 2030.'],
+      ['El freno llegó de afuera', 'En septiembre de 2025 se suspendió la obra, con 2,4 km de cimientos de los 170 previstos.']
+    ],
+    note: 'Buena parte de la información viene de prensa y filtraciones.'
+  },
+  { id: 'debate', t: 'DEBATE', kind: 'close', board: '2026', status: 'DEBATE' }
+];
+
+let idx = 0;
+let locks = 0;
+const state = {}; // per stage: { picked, lockedTried: Set, seats: Set, revealed }
+
+const $ = (s, r = document) => r.querySelector(s);
+const esc = s => String(s).replace(/[&<>"]/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;' }[c]));
+const reduced = matchMedia('(prefers-reduced-motion: reduce)').matches;
+
+function flap(el, text, animate = true) {
+  const html = [...text].map((ch, i) => {
+    const cls = ch === ' ' ? 'sp' : (animate && !reduced ? 'flip' : '');
+    return `<span class="${cls}" style="animation-delay:${i * 35}ms">${ch === ' ' ? '&nbsp;' : esc(ch)}</span>`;
+  }).join('');
+  el.innerHTML = html;
+}
+let seqTimer = null;
+function setBoard(st, animate) {
+  clearTimeout(seqTimer);
+  const dateEl = $('#b-date');
+  if (st.seq && animate && !reduced) {
+    let k = 0;
+    const step = () => { flap(dateEl, st.seq[k]); k++; if (k < st.seq.length) seqTimer = setTimeout(step, 900); };
+    step();
+  } else flap(dateEl, st.board, animate);
+  const locked = ['EN OBRA', 'CONTRATO', 'CAMBIOS'].includes(st.status);
+  flap($('#b-status'), st.status, animate);
+  $('#b-status').classList.toggle('status-lock', locked);
+  flap($('#b-locks'), String(locks).padStart(2, '0'), false);
+}
+
+function S(i) { return state[i] || (state[i] = { picked: null, tried: new Set(), seats: new Set(), revealed: false }); }
+
+function revealHTML(st) {
+  return `<div class="reveal">
+    <div class="panel real"><h3>Lo que pasó</h3><p>${st.real}</p></div>
+    <div class="panel concept"><h3>Concepto</h3><p>${st.concept}</p>${st.q ? `<span class="qref">${st.q}</span>` : ''}</div>
+    ${st.src ? `<p class="src">Fuente: ${st.src}</p>` : ''}
+  </div>`;
+}
+
+function render(animate = true) {
+  const st = STAGES[idx];
+  const s = S(idx);
+  const root = $('#stage');
+  let html = '';
+
+  if (st.kind === 'intro') {
+    html = `<section class="stage single">
+      <div>
+        <div class="kicker">Denver, Colorado · 1991</div>
+        <h1>Ustedes deciden</h1>
+        <p class="context">Están a cargo del nuevo Aeropuerto Internacional de Denver. El edificio está en obra y la ciudad ya anunció la fecha de inauguración: octubre de 1993. Les prometieron el sistema de equipaje más avanzado del mundo.</p>
+        <p class="context">En cada parada, la clase vota qué hacer. Algunas opciones van a estar bloqueadas. Presten atención a qué las bloquea.</p>
+        <div class="row" style="margin-top:22px"><button class="btn" type="button" data-go="1">Empezar en 1991 →</button></div>
+      </div>
+    </section>`;
+  }
+
+  if (st.kind === 'decision') {
+    const opts = st.options.map((o, k) => {
+      const letter = String.fromCharCode(65 + k);
+      let cls = 'opt', msg = '';
+      if (s.tried.has(k)) { cls += ' locked'; msg = `<span class="msg">${LOCK_SVG} ${o.msg}</span>`; }
+      if (s.picked !== null) {
+        if (k === s.picked) { cls += ' chosen'; if (o.type === 'alt') msg = `<span class="msg">${o.msg}</span>`; }
+        else if (!s.tried.has(k)) cls += ' faded';
+      }
+      return `<button class="${cls}" type="button" data-opt="${k}"><span class="code">${letter}</span><span class="txt">${o.txt}${msg}</span></button>`;
+    }).join('');
+    html = `<section class="stage">
+      <div>
+        <div class="kicker">${st.kicker}${st.q ? `<span class="tag">${st.q}</span>` : ''}</div>
+        <h2>${st.title}</h2>
+        <p class="context">${st.context}</p>
+        <p class="prompt">${st.prompt}</p>
+      </div>
+      <div>
+        <div class="options">${opts}</div>
+        ${s.picked !== null ? revealHTML(st) : ''}
+      </div>
+    </section>`;
+  }
+
+  if (st.kind === 'stake') {
+    const chips = st.people.map((p, k) => `<button class="chip" type="button" data-seat="${k}" aria-pressed="${s.seats.has(k)}">${esc(p.n)}</button>`).join('');
+    const roles = st.people.map(p => `<div class="role ${p.inSeat ? 'in' : 'out'}"><b>${esc(p.n)}</b><span class="seat">${p.inSeat ? 'EN LA MESA' : 'AFUERA'}</span><span class="r">${esc(p.r)}</span></div>`).join('');
+    html = `<section class="stage">
+      <div>
+        <div class="kicker">${st.kicker}<span class="tag">Stakeholders · usuarios · cliente</span></div>
+        <h2>${st.title}</h2>
+        <p class="context">${st.context}</p>
+        <p class="prompt">${st.prompt}</p>
+        <div class="chips">${chips}</div>
+        <button class="btn" type="button" id="seat-reveal" ${s.revealed ? 'disabled' : ''}>Ver quién estuvo</button>
+      </div>
+      <div>
+        ${s.revealed ? `<div class="roles">${roles}</div>
+          <div class="reveal"><div class="panel concept"><h3>Concepto</h3><p>${st.concept}</p></div><p class="src">Fuente: ${st.src}</p></div>`
+          : `<div class="panel"><h3>La mesa</h3><p>La clase invitó a ${s.seats.size} de ${st.people.length}.</p></div>`}
+      </div>
+    </section>`;
+  }
+
+  if (st.kind === 'event') {
+    html = `<section class="stage single">
+      <div class="event-card">
+        <div class="kicker">${st.kicker}</div>
+        <h2>${st.title}</h2>
+        <p class="context">${st.context}</p>
+        <div class="panel concept" style="margin-top:14px"><h3>Concepto</h3><p>${st.concept}</p></div>
+        <p class="src">Fuente: ${st.src}</p>
+      </div>
+    </section>`;
+  }
+
+  if (st.kind === 'final') {
+    const tried = Object.values(state).reduce((a, x) => a + x.tried.size, 0);
+    html = `<section class="stage">
+      <div>
+        <div class="kicker">${st.kicker}</div>
+        <h2>${st.title}</h2>
+        <p class="context">${st.context}</p>
+        <div class="tally" style="margin-top:18px">
+          <div><strong>${tried}</strong><span>veces la clase eligió la opción prudente</span></div>
+          <div><strong>16</strong><span>meses de demora en la inauguración</span></div>
+        </div>
+      </div>
+      <div>
+        <div class="panel concept"><h3>Nuestra conclusión</h3>
+          <p class="big-quote">El cronograma no salió de estimar el sistema. El sistema se metió a la fuerza en un cronograma que ya existía.</p>
+        </div>
+        <div class="panel" style="margin-top:12px"><h3>Causa raíz</h3><p>Se intentó implementar un sistema sin precedentes, que debió tratarse como investigación y desarrollo, dentro de una fecha fijada por la política. Hubo poco tiempo de planificación, no se relevó a las aerolíneas y se subestimó la escala.</p></div>
+        <div class="row" style="margin-top:16px"><button class="btn" type="button" data-go="${idx + 1}">Jugar de nuevo en 2026 →</button></div>
+      </div>
+    </section>`;
+  }
+
+  if (st.kind === 'parallel') {
+    html = `<section class="stage">
+      <div>
+        <div class="kicker">${st.kicker}<span class="tag">Qué no cambió</span></div>
+        <h2>${st.title}</h2>
+        <p class="context">${st.context}</p>
+        <p class="src">${st.note}</p>
+      </div>
+      <ul class="bullets">${st.items.map(([h, p]) => `<li><b>${h}</b>${p}</li>`).join('')}</ul>
+    </section>`;
+  }
+
+  if (st.kind === 'close') {
+    html = `<section class="stage single">
+      <div>
+        <div class="kicker">Para discutir con la clase</div>
+        <h2>¿Y ahora qué?</h2>
+        <div class="options" style="margin-top:8px">
+          <details class="q"><summary>¿Lo hubieran salvado las metodologías ágiles?</summary>
+            <div><p>No. Una metodología ágil no corrige un proyecto mal definido desde el inicio, y con el edificio en obra había muy poco margen para iterar. Sí habrían ayudado entregas que se pudieran probar por partes, como un tramo o una terminal. Cambiar la metodología sin cambiar la forma de decidir no alcanzaba.</p><span class="qref">Pregunta disparadora 4</span></div>
+          </details>
+          <details class="q"><summary>Si la IA escribe buena parte del código, ¿dónde está hoy el valor del ingeniero en sistemas?</summary>
+            <div><p>En planificar, relevar requisitos, analizar stakeholders y entender la política detrás de las decisiones. En 1994, Gibbs buscaba la solución en más disciplina sobre el código. Si el tiempo que libera la IA no se usa en lo que de verdad decide el éxito, repetimos su error: buscar la solución en la herramienta y no en la decisión.</p></div>
+          </details>
+        </div>
+        <p class="src" style="margin-top:18px">Fuentes principales: Calleam Consulting; GAO/RCED-95-35BR (1994); de Neufville (1994); Montealegre y Keil (2000); Gibbs (1994); SITA (2026). Bibliografía completa en el informe.</p>
+        <div class="row" style="margin-top:12px"><button class="btn ghost" type="button" id="restart">Reiniciar el juego</button></div>
+      </div>
+    </section>`;
+  }
+
+  root.innerHTML = html;
+  setBoard(st, animate);
+  renderTimeline();
+  $('#prev').disabled = idx === 0;
+  $('#next').disabled = idx === STAGES.length - 1;
+}
+
+function renderTimeline() {
+  $('#timeline').innerHTML = STAGES.map((st, k) =>
+    `<button class="tl ${k < idx ? 'done' : ''} ${k === idx ? 'now' : ''}" type="button" data-go="${k}" aria-label="Ir a ${esc(st.title || st.t)}" ${k === idx ? 'aria-current="step"' : ''}><i></i><small>${st.t}</small></button>`
+  ).join('');
+}
+
+function go(k) {
+  idx = Math.max(0, Math.min(STAGES.length - 1, k));
+  try { history.replaceState(null, '', '#' + STAGES[idx].id); } catch (e) {}
+  render(true);
+  window.scrollTo({ top: 0, behavior: reduced ? 'auto' : 'smooth' });
+}
+
+document.addEventListener('click', e => {
+  const goBtn = e.target.closest('[data-go]');
+  if (goBtn) { go(+goBtn.dataset.go); return; }
+  const optBtn = e.target.closest('[data-opt]');
+  if (optBtn) {
+    const st = STAGES[idx], s = S(idx), k = +optBtn.dataset.opt, o = st.options[k];
+    if (s.picked !== null) return;
+    if (o.type === 'lock') {
+      if (!s.tried.has(k)) { s.tried.add(k); locks++; }
+      render(false);
+      const again = document.querySelector(`[data-opt="${k}"]`);
+      if (again) { again.classList.add('shake'); again.focus(); }
+      flap($('#b-locks'), String(locks).padStart(2, '0'), true);
+      return;
+    }
+    s.picked = k;
+    render(false);
+    return;
+  }
+  const seat = e.target.closest('[data-seat]');
+  if (seat) {
+    const s = S(idx), k = +seat.dataset.seat;
+    if (s.revealed) return;
+    s.seats.has(k) ? s.seats.delete(k) : s.seats.add(k);
+    render(false);
+    return;
+  }
+  if (e.target.closest('#seat-reveal')) { S(idx).revealed = true; render(false); return; }
+  if (e.target.closest('#restart')) {
+    for (const key in state) delete state[key];
+    locks = 0; go(0); return;
+  }
+});
+$('#prev').addEventListener('click', () => go(idx - 1));
+$('#next').addEventListener('click', () => go(idx + 1));
+document.addEventListener('keydown', e => {
+  if (e.target.closest('input, textarea')) return;
+  if (e.key === 'ArrowRight') go(idx + 1);
+  if (e.key === 'ArrowLeft') go(idx - 1);
+});
+
+function fromHash() {
+  const h = location.hash.slice(1);
+  const k = STAGES.findIndex(s => s.id === h);
+  idx = k >= 0 ? k : 0;
+  render(true);
+}
+window.addEventListener('hashchange', fromHash);
+fromHash();
+</script>
+
+</body></html>
