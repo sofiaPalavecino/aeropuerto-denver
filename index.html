@@ -101,6 +101,7 @@ h2 { font-size: clamp(2.2rem, 4.6vw, 3.6rem); }
 .opt.chosen { border-color: var(--ok); }
 .opt.chosen .code { background: var(--ok); color: var(--surface); }
 .opt.faded { opacity: .55; }
+.opt.faded:hover { opacity: 1; }
 .opt.shake { animation: shake .4s; }
 @keyframes shake { 20%,60% { transform: translateX(-6px); } 40%,80% { transform: translateX(6px); } }
 
@@ -198,22 +199,22 @@ const STAGES = [
   { id: 'inicio', t: 'INICIO', kind: 'intro', board: 'OCT 1993', status: 'EN OBRA' },
   {
     id: 'estrategia', t: '1991', kind: 'decision', board: 'OCT 1993', status: 'EN OBRA',
-    kicker: 'Verano de 1991', title: '¿Quién se encarga del equipaje?',
-    context: 'El plan inicial era que cada aerolínea resolviera su propio sistema de equipaje. Pero la ciudad quiere algo más ambicioso: un sistema automatizado único, el más avanzado del mundo, que acorte las conexiones entre vuelos.',
-    prompt: 'La clase vota:',
+    kicker: '1991', title: 'De una terminal a todo el aeropuerto',
+    context: 'United Airlines, la aerolínea principal de Denver, le encarga a BAE un sistema automatizado de equipaje para su propia terminal. La ciudad lo ve y quiere más. Pide un sistema único para todo el aeropuerto, el más avanzado del mundo. El edificio ya está en obra y la inauguración tiene fecha.',
+    prompt: '¿Cómo definen qué tiene que hacer el sistema?',
     options: [
-      { txt: 'Que cada aerolínea arme el suyo, como estaba previsto.', type: 'alt', msg: 'El plan el diseño estructural del aeropuerto se hizo considerando que cada aerolínea iba a implementar su propio sistema de equipaje.' },
-      { txt: 'Un sistema integrado para todo el aeropuerto, a cargo de la ciudad.', type: 'real' },
-      { txt: 'Sistema integrado, pero mover la inauguración para darle tiempo.', type: 'lock', msg: 'Bloqueado: la inauguración es en octubre de 1993.' }
+      { txt: 'Tomar el diseño de United y extenderlo a todo el aeropuerto.', type: 'real' },
+      { txt: 'Relevar primero a todas las aerolíneas para saber cuántas valijas mueven, en qué horarios, con qué conexiones y de qué tipo.', type: 'lock', msg: 'Bloqueado. No hay tiempo, porque la inauguración es en octubre de 1993.' },
+      { txt: 'Que cada aerolínea resuelva su propio sistema, como estaba previsto.', type: 'alt', msg: 'Era el plan original. Es más modesto, pero cada aerolínea define lo que necesita. A cambio, se renuncia a la promesa del aeropuerto.' }
     ],
-    real: 'Se eligió el sistema integrado, pero en 1991, con el edificio ya en obra. Si se hubiera decidido al principio, había dos años más para desarrollarlo.',
-    concept: 'Cambiar de tecnología exige cambiar quién es responsable. La decisión llegó tarde, y ese atraso se convirtió en presión sobre el cronograma.',
-    src: 'Calleam Consulting, Key Decision 1.'
+    real: 'La ciudad tomó una idea pensada para una sola aerolínea y la extendió a todo el aeropuerto. No relevó a ninguna aerolínea, ni siquiera a United.',
+    concept: 'Falta de relevamiento. Antes de definir el sistema no se identificó a todos los stakeholders ni se midió el volumen que tenía que soportar. Las demás aerolíneas, usuarias directas del sistema, quedaron afuera de la definición.',
+    src: 'de Neufville (1994); Donaldson (2002); Calleam, Key Decision 1.'
   },
   {
     id: 'prototipo', t: '1992', kind: 'decision', board: 'OCT 1993', status: 'EN OBRA',
     kicker: '1991 – 1992', title: 'Las licitaciones fracasan',
-    context: 'Se rechazan las tres ofertas oficiales. Los oferentes advierten que el plazo no alcanza. BAE, que ya construía un sistema para United, muestra un prototipo a gran escala montado en un galpón.',
+    context: 'La ciudad licita el sistema para todo el aeropuerto y la licitación no da resultado. Ninguna de las tres ofertas sirve, y los oferentes advierten que el plazo no alcanza. BAE ni siquiera se presenta. Entonces la ciudad le pide directamente a BAE que lo haga, y BAE presenta un proyecto y un prototipo a gran escala montado en un galpón.',
     prompt: 'La clase vota:',
     options: [
       { txt: 'Pedir una revisión independiente del prototipo y del plan.', type: 'lock', msg: 'Bloqueado: no hay tiempo. La revisión demora la obra.' },
@@ -514,7 +515,7 @@ document.addEventListener('click', e => {
   const optBtn = e.target.closest('[data-opt]');
   if (optBtn) {
     const st = STAGES[idx], s = S(idx), k = +optBtn.dataset.opt, o = st.options[k];
-    if (s.picked !== null) return;
+    if (k === s.picked) return;
     if (o.type === 'lock') {
       if (!s.tried.has(k)) { s.tried.add(k); locks++; }
       render(false);
